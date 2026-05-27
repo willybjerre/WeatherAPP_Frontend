@@ -91,8 +91,8 @@ function fullscreenReveal() {
         const correct = userGuess === winner;
 
         img.src = winner === 'Yr'
-            ? 'pictures/hero_YR_Winner.png'
-            : 'pictures/hero_DMI_Winner.png';
+            ? 'Pictures/hero_YR_Winner.png'
+            : 'Pictures/hero_DMI_Winner.png';
 
         popup.className = 'reveal-popup ' + (correct ? 'correct' : 'wrong');
         popup.innerHTML = correct
