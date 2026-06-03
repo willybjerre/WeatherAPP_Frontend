@@ -1,61 +1,38 @@
-# Frontend
+# Forecast Accuracy — Yr vs DMI
 
-Plain HTML / JS / CSS. No build step, no npm. Chart.js is loaded from a CDN
-inside `index.html`.
+University of Copenhagen, DIKU — Databases and Information Systems, spring 2026.
 
-## Running
+A .NET 9 Web API with PostgreSQL that compares the forecast accuracy of two weather services, **Yr** (MET Norway) and **DMI** (Danmarks Meteorologiske Institut, via Open-Meteo), for Copenhagen. The system fetches forecasts and observed temperatures daily, stores everything, and computes mean absolute error (MAE) between each provider's predictions and the actual temperature measured at Copenhagen Airport (Meteostat station 06180).
 
-From inside this `frontend/` directory:
+Since the application requires data collected per day it needs to run for a while to have a efficient purpose, this is done via background service in the c# backend, running locally is therefor not recommended.
+## Live system
 
+- **Backend:** https://db-project-production-0e3d.up.railway.app
+  Swagger: `/swagger` — example: `/api/WeatherForecast/comparison?days=7`
+- **Frontend:** https://willybjerre.github.io/WeatherAPP_Frontend/
+- **repo:** https://github.com/willybjerre/WeatherAPP_Frontend
+
+## Run locally
+
+Requires Docker, .NET 9 SDK, and a free Meteostat API key (sign up on RapidAPI → subscribe to Meteostat's free tier).
+
+```bash
+# 1. Start Postgres
+docker compose -f Docker-Compose.yml up -d
+
+# 2. Set the Meteostat API key (once per machine)
+dotnet user-secrets set "Meteostat:ApiKey" "<your key>"
+
+# 3. Run the app
+dotnet run
 ```
-python3 -m http.server 5173
-```
 
-Then open <http://localhost:5173> in a browser.
+Database migrations and seed data (Yr, DMI, Copenhagen) apply automatically on startup. Swagger is then at http://localhost:5070/swagger.
 
-## Requirements
+## Tech stack
 
-The frontend needs the backend running on **http://localhost:5070**:
-
-1. Start Postgres:
-   ```
-   docker compose -f Docker-Compose.yml up -d
-   ```
-   (run from the repo root)
-
-2. Start the API:
-   ```
-   dotnet run
-   ```
-   (run from the repo root)
-
-CORS for `http://localhost:5173` is already configured in the backend's
-`Program.cs`, so this origin works out of the box. If you serve the frontend
-from a different port, update the CORS policy in the backend too.
-
-## Files
-
-- `index.html` — markup: hero banner, three section cards (Verdict, Next 24
-  hours, History), segmented 7d/30d toggle. Loads Chart.js from
-  `cdn.jsdelivr.net`.
-- `app.js` — fetch logic + Chart.js setup. Backend base URL lives in the
-  `API_BASE` const at the top.
-- `style.css` — dark dashboard theme. Accent colours: Yr orange `#f5a623`,
-  DMI blue `#3b9eff`, Observed green `#3ecf8e` — used consistently in charts
-  and verdict cards.
-- `hero.jpg` — banner image at the top of the page (the "Yr vs DMI" storm
-  giants illustration). Drop the file in this directory; if it's missing the
-  banner area still renders (dark placeholder) but with the title overlay
-  intact. If your file has a different name, update the `src` in
-  `index.html` accordingly.
-
-## Endpoints used
-
-All routes are documented in `../API.md`. The page calls three of them:
-
-- `GET /api/WeatherForecast/comparison?days={N}` — Verdict section.
-- `GET /api/WeatherForecast/tomorrow` — Next 24 hours section.
-- `GET /api/WeatherForecast/timeseries?days={N}` — History section.
-
-The 7d/30d toggle re-fetches `comparison` and `timeseries` only; `tomorrow`
-is unaffected.
+- .NET 9 Web API
+- Entity Framework Core 9 with Npgsql
+- PostgreSQL 16 (Docker)
+- Chart.js (frontend)
+- Deployed on Railway (backend) and GitHub Pages (frontend)
