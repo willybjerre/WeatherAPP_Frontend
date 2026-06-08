@@ -73,6 +73,33 @@
                 <div class="loading">Loading…</div>
             </div>
         </section>
+
+        <section class="card" id="search-section">
+            <h2 class="section-title">Search by temperature</h2>
+            <p class="section-subtitle">
+                Find forecasts or observations matching a temperature. Uses regex matching on the backend.
+            </p>
+            <div class="card-body" id="search-body">
+                <div class="search-controls">
+                    <div class="segmented" role="tablist" aria-label="Source">
+                        <button id="src-forecasts" class="seg-btn active" type="button" role="tab">Forecasts</button>
+                        <button id="src-observations" class="seg-btn" type="button" role="tab">Observations</button>
+                    </div>
+                    <input
+                        type="text"
+                        id="search-input"
+                        class="search-input"
+                        placeholder="e.g. 20  or  20.5  or  -3"
+                        autocomplete="off"
+                    />
+                    <button id="search-btn" class="search-btn" type="button">Search</button>
+                </div>
+                <p class="search-hint" id="search-hint">
+                    Type a number (e.g. <code>20</code> matches 20.0, 20.4, 20.9). search is done with Regex Pattern Matching in the backend.
+                </p>
+                <div id="search-results"></div>
+            </div>
+        </section>
     </div>
 
     <!-- Fullscreen takeover efter gæt: vinder-billedet fylder skærmen i 2 sekunder

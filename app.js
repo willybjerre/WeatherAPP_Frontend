@@ -435,6 +435,142 @@ function formatDateHourLabel(iso) {
 }
 
 // =========================================================================
+// SECTION 4 — SEARCH BY TEMPERATURE (regex)
+// =========================================================================
+
+let searchSource = 'forecasts'; // 'forecasts' | 'observations'
+
+const srcForecastsBtn = document.getElementById('src-forecasts');
+const srcObservationsBtn = document.getElementById('src-observations');
+const searchInput = document.getElementById('search-input');
+const searchBtn = document.getElementById('search-btn');
+const searchResults = document.getElementById('search-results');
+
+srcForecastsBtn.addEventListener('click', () => setSearchSource('forecasts'));
+srcObservationsBtn.addEventListener('click', () => setSearchSource('observations'));
+searchBtn.addEventListener('click', runSearch);
+searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') runSearch();
+});
+
+function setSearchSource(src) {
+    searchSource = src;
+    srcForecastsBtn.classList.toggle('active', src === 'forecasts');
+    srcObservationsBtn.classList.toggle('active', src === 'observations');
+}
+
+// Konverterer brugerens temperatur-input til et regex.
+// "20"     → ^20\.        (alle temperaturer der starter med 20: 20.0, 20.4, …)
+// "-3"     → ^-3\.        (alle der starter med -3: -3.0, -3.5, …)
+// "20.5"   → ^20\.5$      (præcist 20.5)
+// Ellers: input sendes som rå regex (avancerede brugere kan skrive deres eget).
+function buildPatternFromInput(raw) {
+    const trimmed = raw.trim();
+    if (trimmed === '') return null;
+
+    if (/^-?\d+$/.test(trimmed)) {
+        return '^' + trimmed + '\\.';
+    }
+    if (/^-?\d+\.\d+$/.test(trimmed)) {
+        return '^' + trimmed.replace('.', '\\.') + '$';
+    }
+    return trimmed;
+}
+
+async function runSearch() {
+    const raw = searchInput.value;
+    const pattern = buildPatternFromInput(raw);
+
+    if (pattern === null) {
+        searchResults.innerHTML =
+            `<div class="empty-state">Type a temperature first.</div>`;
+        return;
+    }
+
+    searchResults.innerHTML = `<div class="loading">Searching…</div>`;
+
+    const url = `${API_BASE}/api/WeatherForecast/search`
+        + `?source=${encodeURIComponent(searchSource)}`
+        + `&pattern=${encodeURIComponent(pattern)}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            const msg = body.error || `${res.status} ${res.statusText}`;
+            searchResults.innerHTML =
+                `<div class="section-error">${escapeHtml(msg)}</div>`;
+            return;
+        }
+        const data = await res.json();
+        renderSearchResults(data, pattern);
+    } catch (err) {
+        searchResults.innerHTML =
+            `<div class="section-error">Couldn't reach backend at ${API_BASE}.</div>`;
+    }
+}
+
+function renderSearchResults(data, sentPattern) {
+    const { source, matchCount, results } = data;
+
+    const header = `
+        <div class="search-summary">
+            <span class="search-count">${matchCount}</span> match${matchCount === 1 ? '' : 'es'}
+            in <strong>${source}</strong> for pattern
+            <code class="search-pattern">${escapeHtml(sentPattern)}</code>
+        </div>
+    `;
+
+    if (matchCount === 0) {
+        searchResults.innerHTML = header + `<div class="empty-state">No rows matched.</div>`;
+        return;
+    }
+
+    let rowsHtml;
+    if (source === 'forecasts') {
+        rowsHtml = results.map(r => `
+            <tr>
+                <td>${formatDateHourLabel(r.targetDateTime)}</td>
+                <td><span class="provider-name ${r.provider.toLowerCase()}">${r.provider}</span></td>
+                <td class="num">${r.predTemp.toFixed(1)} °C</td>
+            </tr>
+        `).join('');
+        searchResults.innerHTML = header + `
+            <div class="search-table-wrap">
+                <table class="search-table">
+                    <thead><tr><th>Target time (UTC)</th><th>Provider</th><th class="num">Temp</th></tr></thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        rowsHtml = results.map(r => `
+            <tr>
+                <td>${formatDateHourLabel(r.obsAt)}</td>
+                <td class="num">${r.temp.toFixed(1)} °C</td>
+            </tr>
+        `).join('');
+        searchResults.innerHTML = header + `
+            <div class="search-table-wrap">
+                <table class="search-table">
+                    <thead><tr><th>Observed at (UTC)</th><th class="num">Temp</th></tr></thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        `;
+    }
+}
+
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// =========================================================================
 // Initial load — 7 days default. Alle tre sektioner kører uafhængigt,
 // så en fejl i én sektion ikke vælter de andre.
 // =========================================================================
